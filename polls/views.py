@@ -1,8 +1,10 @@
-from django.shortcuts import render
-from django.http import HttpResponse,Http404
+from django.shortcuts import render, get_list_or_404
+from django.http import HttpResponse,Http404 , HttpResponseRedirect
 from django.shortcuts import render
 from .models import Question, Choice
 from django.template import loader
+from django.urls import reverse   # 类似前端模板语言 url 函数
+from django.views import generic  # 从数据库取数据前台渲染列表的操作比较简单重复，django封装了这个过程提供了统一
 
 # Create your views here.
 # def index(request):
@@ -78,10 +80,38 @@ def results(request, question_id):
     """
     投票结果
     """
-    pass
+    question = Question.objects.get(id=question_id)
+    return render(request, 'polls/results.html', {'question':question})
 
 def vote(request, question_id):
     """
     投票
     """
-    pass
+    try:
+        question = Question.objects.get(id=question_id)
+        choices = question.choice_set.all()
+        choice_id = request.POST['choice']
+        selected_choice = question.choice_set.get(id=choice_id)
+    except Question.DoesNotExist as e:
+        error_message = '问题内容不存在，检查问题id'
+    except Choice.DoesNotExist as e:
+        error_message = '问题对应的选项不存在'
+        return render(request, 'polls/detail.html', context={
+            'question': question,
+            'error_message': error_message
+        })
+    else:
+        # sql update choice set votes= votes+1 where id=2
+        selected_choice.votes += 1
+        # sql commit()
+        selected_choice.save()
+        # 投票完成重定向 views.results(qid)
+        return HttpResponseRedirect(reverse('polls:results', args=(question.id,)))
+
+# 通用模板示例，跟 def index类比着看。比较适合单调的增删改查。
+class SimpleView(generic.ListView):
+    template_name = 'polls/index.html'
+    context_object_name = 'question_list'
+
+    def get_queryset(self):
+        return Question.objects.all()
