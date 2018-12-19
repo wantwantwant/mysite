@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 
+app_name = 'polls'
 urlpatterns = [
     # 首页 http://ip:port/polls
     path('', views.index, name='index'),
